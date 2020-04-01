@@ -3,10 +3,11 @@
 """Classes related to the motion of a telescope.
 """
 
-import numpy as np
+from abc import ABCMeta, abstractmethod
 from astropy.coordinates import AltAz, Angle, EarthLocation, SkyCoord
 from astropy.time import Time
 import astropy.units as u
+import numpy as np
 
 # alternative download location since
 # http://maia.usno.navy.mil/ser7/finals2000A.all is unavailable:
@@ -71,13 +72,13 @@ class Position(object):
         text += 'Altitude:       {0:6.2f}\n'.format(self.alt)
         text += 'Azimuth:        {0:6.2f}\n'.format(self.az)
         text += 'Hour angle:     {0:6.2f} h\n'.format(self.ha.hour)
-        text += 'Zenith angle:   {0:6.2f}\n'.format(self.za)
+        text += 'Zenith angle:   {0:6.2f}'.format(self.za)
 
         return text
 
 #==============================================================================
 
-class Telescope(object):
+class Telescope(object, metaclass=ABCMeta):
     """Telescope base class.
 
     Provides general and abstract methods for Telescope instances.
@@ -86,6 +87,7 @@ class Telescope(object):
     """
 
     #--------------------------------------------------------------------------
+    @abstractmethod
     def __init__(
             self, lat, lon, height, name=''):
         """Create a Telescope instance.
@@ -125,6 +127,10 @@ class Telescope(object):
         self.frame = None
         self.pos = None
 
+        self.slew_model_dome = None
+
+        print('Telescope: {0:s} created.'.format(self.name))
+
     #--------------------------------------------------------------------------
     def __str__(self):
         """Write out location and current position of the telescope.
@@ -151,6 +157,7 @@ class Telescope(object):
         return text
 
     #--------------------------------------------------------------------------
+    @abstractmethod
     def set_slew_model(self, axis, slew_model):
         """Set a slew model for a specific axis.
         This slew model will define how to calculate the time needed to slew
@@ -175,7 +182,7 @@ class Telescope(object):
         if axis == 'dome':
             self.dome = True
             self.slew_model_dome = slew_model
-            print 'Dome slew model set.'
+            print('Telescope: Dome slew model set.')
 
         elif axis == 'ra':
             # implement in child class
@@ -192,13 +199,32 @@ class Telescope(object):
         return None
 
     #--------------------------------------------------------------------------
+    @abstractmethod
+    def is_set(self):
+        """Check if slew models have been set.
+
+        Returns
+        -----
+        out : bool
+            True, if slew model has been set for each axis. False, otherwise.
+
+        Notes
+        -----
+        Abstract method. Mount dependent specifics need to be defined in child
+        classes.
+        """
+
+        return False
+
+    #--------------------------------------------------------------------------
     def set_time(self, time):
         """Set current time.
 
         Parameters
         -----
         time : astropy.Time
-            Date and time in UTC.
+            Date and time in UTC. Accepts any input format that astropy.Time is
+            accepting.
 
         Returns
         -----
@@ -207,7 +233,6 @@ class Telescope(object):
 
         self.time = Time(time, scale='utc', location=self.loc)
         self.frame = AltAz(obstime=self.time, location=self.loc)
-
 
     #--------------------------------------------------------------------------
     def set_pos(self, coord):
@@ -232,6 +257,7 @@ class Telescope(object):
         return None
 
     #--------------------------------------------------------------------------
+    @abstractmethod
     def set_to_zenith(self):
         """Set telescope position to zenith.
 
@@ -249,6 +275,7 @@ class Telescope(object):
         pass
 
     #--------------------------------------------------------------------------
+    @abstractmethod
     def get_slew_time(self, coord):
         """Calculate slew time from current position to given coordinates.
 
@@ -302,7 +329,8 @@ class TelescopeEq(Telescope):
         None
         """
 
-        super(TelescopeEq, self).__init__(lat, lon, height, name=name)
+        super().__init__(lat, lon, height, name=name)
+        print(self.name)
         self.slew_model_ra = None
         self.slew_model_dec = None
 
@@ -327,15 +355,15 @@ class TelescopeEq(Telescope):
         if axis == 'dome':
             self.dome = True
             self.slew_model_dome = slew_model
-            print 'Dome slew model set.'
+            print('Telescope: Dome slew model set.')
 
         elif axis == 'ra':
             self.slew_model_ra = slew_model
-            print 'RA slew model set.'
+            print('Telescope: RA slew model set.')
 
         elif axis == 'dec':
             self.slew_model_dec = slew_model
-            print 'Dec slew model set.'
+            print('Telescope: Dec slew model set.')
 
         else:
             raise ValueError(
@@ -343,6 +371,32 @@ class TelescopeEq(Telescope):
                             axis, self.mount))
 
         return None
+
+    #--------------------------------------------------------------------------
+    def is_set(self):
+        """Check if slew models have been set.
+
+        Returns
+        -----
+        out : bool
+            True, if slew model has been set for each axis. False, otherwise.
+        """
+
+        ready = True
+
+        if self.slew_model_ra is None:
+            print('WARNING: No slew model for RA axis set.')
+            ready = False
+
+        if self.slew_model_dec is None:
+            print('WARNING: No slew model for DEC axis set.')
+            ready = False
+
+        if self.slew_model_dome is None:
+            print('WARNING: No slew model for dome set.')
+            # only print(warning, dome is optional
+
+        return ready
 
     #--------------------------------------------------------------------------
     def set_to_zenith(self):
@@ -395,11 +449,12 @@ class TelescopeEq(Telescope):
 
 #==============================================================================
 
-class SlewModel(object):
+class SlewModel(object, metaclass=ABCMeta):
     """Slew model base class.
     """
 
     #--------------------------------------------------------------------------
+    @abstractmethod
     def __init__(self):
         """Create a SlewModel instance.
         """
@@ -407,21 +462,19 @@ class SlewModel(object):
         return None
 
     #--------------------------------------------------------------------------
+    @abstractmethod
     def __str__(self):
         """Write out information about the slew model.
 
         Returns
         -----
         out : str
-
-        Notes
-        -----
-        Abstract method.
         """
 
         return 'SlewModel instance.'
 
     #--------------------------------------------------------------------------
+    @abstractmethod
     def get_slew_time(self, angle):
         """Calculate the slew time.
 
@@ -434,10 +487,6 @@ class SlewModel(object):
         -----
         out : numpy.ndarray
             Time needed to slew by the given angle(s).
-
-        Notes
-        -----
-        Abstract method.
         """
 
         return None

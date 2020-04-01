@@ -3,9 +3,11 @@
 """Classes for observational constraints.
 """
 
-import numpy as np
+from abc import ABCMeta, abstractmethod
 from astropy.coordinates import get_sun, get_moon
 import astropy.units as u
+import numpy as np
+
 import utilities as ut
 
 __author__ = "Sebastian Kiehlmann"
@@ -24,18 +26,23 @@ class Constraints(object):
     """
     """
 
+    #--------------------------------------------------------------------------
     def __init__(self):
         """
         """
 
         self.constraints = []
 
+    #--------------------------------------------------------------------------
     def add(self, constraint):
         """
         """
 
+        # TODO: check if Constraint instance (need ABC module)
+
         self.constraints.append(constraint)
 
+    #--------------------------------------------------------------------------
     def get(self, source_coord, telescope):
         """
         """
@@ -48,14 +55,18 @@ class Constraints(object):
 
 #==============================================================================
 
-class Constraint(object):
+class Constraint(object, metaclass=ABCMeta):
     """
     """
 
+    #--------------------------------------------------------------------------
+    @abstractmethod
     def __init__(self):
         """
         """
 
+    #--------------------------------------------------------------------------
+    @abstractmethod
     def get(self, source_coord, telescope):
         """
         """
@@ -66,12 +77,14 @@ class ElevationLimit(Constraint):
     """
     """
 
+    #--------------------------------------------------------------------------
     def __init__(self, limit):
         """
         """
 
         self.limit = limit * u.deg
 
+    #--------------------------------------------------------------------------
     def get(self, source_coord, telescope):
         """
         """
@@ -88,12 +101,14 @@ class AirmassLimit(Constraint):
     """
     """
 
+    #--------------------------------------------------------------------------
     def __init__(self, limit, conversion="secz"):
         """
         """
 
         self.limit = limit
 
+    #--------------------------------------------------------------------------
     def get(self, source_coord, telescope):
         """
         """
@@ -110,12 +125,14 @@ class SunDistance(Constraint):
     """
     """
 
+    #--------------------------------------------------------------------------
     def __init__(self, limit):
         """
         """
 
         self.limit = limit * u.deg
 
+    #--------------------------------------------------------------------------
     def get(self, source_coord, telescope):
         """
         """
@@ -134,12 +151,14 @@ class MoonDistance(Constraint):
     """
     """
 
+    #--------------------------------------------------------------------------
     def __init__(self, limit):
         """
         """
 
         self.limit = limit * u.deg
 
+    #--------------------------------------------------------------------------
     def get(self, source_coord, telescope):
         """
         """
@@ -158,6 +177,7 @@ class MoonPolarization(Constraint):
     """
     """
 
+    #--------------------------------------------------------------------------
     def __init__(self, limit):
         """
         """
@@ -166,6 +186,7 @@ class MoonPolarization(Constraint):
         self.limit_lo = (90. - limit) * u.deg
         self.limit_hi = (90. + limit) * u.deg
 
+    #--------------------------------------------------------------------------
     def get(self, source_coord, telescope):
         """
         """

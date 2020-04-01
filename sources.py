@@ -66,4 +66,6 @@ class Sources:
             raise ValueError("dec_unit needs to be 'deg'.")
 
         self.coord = SkyCoord(ra, dec)
+        self.active = np.ones(self.coord.size, dtype=bool)
+        self.scheduled = np.ones(self.coord.size, dtype=bool)
 
