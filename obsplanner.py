@@ -25,7 +25,10 @@ __status__ = "Production"
 #==============================================================================
 
 class Obsplanner(object):
-    """
+    """Observation planner.
+    
+    Combines all components needed for observation planning in order to run the
+    planner.
     """
 
     #--------------------------------------------------------------------------
