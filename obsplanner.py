@@ -6,11 +6,11 @@
 from astropy.coordinates import SkyCoord
 import numpy as np
 
-from constraints import Constraints
+from constraints import Constraint, Constraints
 from constraints import AirmassLimit, SunDistance, MoonDistance, MoonPolarization
-from scheduler import SimpleScheduler
+from scheduler import Scheduler, SimpleScheduler
 from sources import Sources
-from telescope import TelescopeEq, SlewModelLinear
+from telescope import Telescope, TelescopeEq, SlewModelLinear
 
 __author__ = "Sebastian Kiehlmann"
 __credits__ = ["Sebastian Kiehlmann"]
@@ -55,8 +55,11 @@ class Obsplanner(object):
             Defines the motion of the telescope.
         """
 
-        # TODO: check if Telescope instance (need ABC module)
+        # check if Telescope instance:
+        if not isinstance(telescope, Telescope):
+            raise TypeError('Unsupported type: {0}'.format(type(telescope)))
 
+        # check if telescope is readily set up:
         ready = telescope.is_set()
         if ready:
             self.telescope = telescope
@@ -75,7 +78,9 @@ class Obsplanner(object):
             Sources that should be scheduled.
         """
 
-        # TODO: check if Sources instance (need ABC module)
+        # check if Sources instance:
+        if not isinstance(sources, Sources):
+            raise TypeError('Unsupported type: {0}'.format(type(sources)))
 
         self.sources = sources
         print('Obsplanner: Sources added.')
@@ -90,7 +95,9 @@ class Obsplanner(object):
             Defines the routines how sources are scheduled.
         """
 
-        # TODO: check if Scheduler instance (need ABC module)
+        # check if Scheduler instance:
+        if not isinstance(scheduler, Scheduler):
+            raise TypeError('Unsupported type: {0}'.format(type(scheduler)))
 
         self.scheduler = scheduler
 
@@ -156,7 +163,9 @@ class Obsplanner(object):
             at a given time.
         """
 
-        # TODO: chack that constraint is a Constraint instance
+        # chack if Constraint instance:
+        if not isinstance(constraint, Constraint):
+            raise TypeError('Unsupported type: {0}'.format(type(constraint)))
 
         self.constraints.add(constraint)
 
