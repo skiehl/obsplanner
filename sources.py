@@ -5,6 +5,7 @@
 
 import numpy as np
 from astropy.coordinates import Angle, SkyCoord
+from astropy.time import TimeDelta
 import astropy.units as u
 
 __author__ = "Sebastian Kiehlmann"
@@ -25,7 +26,8 @@ class Sources:
 
     #--------------------------------------------------------------------------
     def __init__(
-            self, name, ra, dec, ra_unit='deg', dec_unit='deg'):
+            self, name, ra, dec, exposure_time, exposure_rep, ra_unit='deg',
+            dec_unit='deg'):
         """Create Sources instance.
 
         Parameters
@@ -36,6 +38,10 @@ class Sources:
             Array of right ascension values.
         dec : np.ndarray
             Array of declination values.
+        exposure_time : np.ndarray
+            Exposure times for each source in seconds.
+        exposure_rep : np.ndarray
+            Number of exposure repetitions for each source.
         ra_unit : str, default='deg'
             Unit right ascensions are provided in.
         ra_unit : str, default='deg'
@@ -66,6 +72,15 @@ class Sources:
             raise ValueError("dec_unit needs to be 'deg'.")
 
         self.coord = SkyCoord(ra, dec)
+        self.exposure_time = TimeDelta(exposure_time, format='sec')
+        self.exposure_rep = exposure_rep
         self.active = np.ones(self.coord.size, dtype=bool)
         self.scheduled = np.ones(self.coord.size, dtype=bool)
+        self.size = self.name.size
+
+    #--------------------------------------------------------------------------
+    def __len__(self):
+        return self.size
+        
+    
 
