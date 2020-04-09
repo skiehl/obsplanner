@@ -34,11 +34,25 @@ class Constraints(object):
         self.constraints = []
 
     #--------------------------------------------------------------------------
+    def __str__(self):
+        """String representation.
+        """
+    
+        text = 'Set of observational constraints:\n'
+        for constraint in self.constraints:
+            text = '{0:s}* {1:s}\n'.format(text, constraint.__str__())
+        
+        return text
+    
+
+    #--------------------------------------------------------------------------
     def add(self, constraint):
         """Add a new constraint.
         """
 
-        # TODO: check if Constraint instance (need ABC module)
+        # chack if Constraint instance:
+        if not isinstance(constraint, Constraint):
+            raise TypeError('Unsupported type: {0}'.format(type(constraint)))
 
         self.constraints.append(constraint)
 
@@ -86,6 +100,16 @@ class Constraint(object, metaclass=ABCMeta):
 
     #--------------------------------------------------------------------------
     @abstractmethod
+    def __str__(self):
+        """String representation.
+        
+        Notes
+        -----
+        Abstract method. String depends on the specific constraint.
+        """
+
+    #--------------------------------------------------------------------------
+    @abstractmethod
     def get(self, source_coord, telescope):
         """Evaluate the constraint for given targets, a specific location and
         time.
@@ -128,6 +152,13 @@ class ElevationLimit(Constraint):
         """
 
         self.limit = limit * u.deg
+
+    #--------------------------------------------------------------------------
+    def __str__(self):
+        """String representation.
+        """
+        
+        return 'Elevation limit: {0:.2f}'.format(self.limit)
 
     #--------------------------------------------------------------------------
     def get(self, source_coord, telescope):
@@ -180,6 +211,13 @@ class AirmassLimit(Constraint):
         self.conversion = conversion
 
     #--------------------------------------------------------------------------
+    def __str__(self):
+        """String representation.
+        """
+        
+        return 'Airmass limit: {0:.2f}'.format(self.limit)
+
+    #--------------------------------------------------------------------------
     def get(self, source_coord, telescope):
         """Evaluate the constraint for given targets, a specific location and
         time.
@@ -224,6 +262,13 @@ class SunDistance(Constraint):
         """
 
         self.limit = limit * u.deg
+
+    #--------------------------------------------------------------------------
+    def __str__(self):
+        """String representation.
+        """
+        
+        return 'Sun distance: {0:.2f}'.format(self.limit)
 
     #--------------------------------------------------------------------------
     def get(self, source_coord, telescope):
@@ -271,6 +316,13 @@ class MoonDistance(Constraint):
         """
 
         self.limit = limit * u.deg
+
+    #--------------------------------------------------------------------------
+    def __str__(self):
+        """String representation.
+        """
+        
+        return 'Moon distance: {0:.2f}'.format(self.limit)
 
     #--------------------------------------------------------------------------
     def get(self, source_coord, telescope):
@@ -323,6 +375,13 @@ class MoonPolarization(Constraint):
         self.limit = limit * u.deg
         self.limit_lo = (90. - limit) * u.deg
         self.limit_hi = (90. + limit) * u.deg
+
+    #--------------------------------------------------------------------------
+    def __str__(self):
+        """String representation.
+        """
+        
+        return 'Moon polarization: {0:.2f}'.format(self.limit)
 
     #--------------------------------------------------------------------------
     def get(self, source_coord, telescope):
