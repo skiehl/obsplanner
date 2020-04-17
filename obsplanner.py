@@ -7,7 +7,8 @@ from astropy.coordinates import SkyCoord
 import numpy as np
 
 from constraints import Constraint, Constraints
-from constraints import AirmassLimit, SunDistance, MoonDistance, MoonPolarization
+from constraints import AirmassLimit, ElevationLimit, SunDistance, MoonDistance, MoonPolarization
+from instrument import Instrument, InstrumentSimple
 from scheduler import Scheduler, SimpleScheduler
 from sources import Sources
 from telescope import Telescope, TelescopeEq, SlewModelLinear
@@ -26,7 +27,7 @@ __status__ = "Production"
 
 class Obsplanner(object):
     """Observation planner.
-    
+
     Combines all components needed for observation planning in order to run the
     planner.
     """
@@ -40,6 +41,7 @@ class Obsplanner(object):
         None
         """
 
+        self.instrument = None
         self.telescope = None
         self.sources = None
         self.constraints = Constraints()
@@ -63,10 +65,35 @@ class Obsplanner(object):
         ready = telescope.is_set()
         if ready:
             self.telescope = telescope
-            print('Obsplanner: Telescope added.')
+            if telescope.name is None:
+                print('Obsplanner: Telescope added.')
+            else:
+                print('Obsplanner: Telescope {0:s} added.'.format(
+                        telescope.name))
         else:
             print('Obsplanner: WARNING: Cannot add Telescope instance.' \
                   'Telescope is not completely set up with slew models.')
+
+    #--------------------------------------------------------------------------
+    def set_instrument(self, instrument):
+        """Set the instrument for observations.
+
+        Parameters
+        -----
+        instrument : Insturment instance
+            Defines the time needed for each observation.
+        """
+
+        # check if Instrument instance:
+        if not isinstance(instrument, Instrument):
+            raise TypeError('Unsupported type: {0}'.format(type(instrument)))
+
+        self.instrument = instrument
+        if instrument.name is None:
+            print('Obsplanner: Instrument added.')
+        else:
+            print('Obsplanner: Instrument {0:s} added.'.format(
+                    instrument.name))
 
     #--------------------------------------------------------------------------
     def set_sources(self, sources):
@@ -83,7 +110,7 @@ class Obsplanner(object):
             raise TypeError('Unsupported type: {0}'.format(type(sources)))
 
         self.sources = sources
-        print('Obsplanner: Sources added.')
+        print('Obsplanner: {0:d} sources added.'.format(sources.size))
 
     #--------------------------------------------------------------------------
     def set_scheduler(self, scheduler):
@@ -163,13 +190,9 @@ class Obsplanner(object):
             at a given time.
         """
 
-        # chack if Constraint instance:
-        if not isinstance(constraint, Constraint):
-            raise TypeError('Unsupported type: {0}'.format(type(constraint)))
-
         self.constraints.add(constraint)
-
-        # TODO: write which type of constraint was added
+        print('Observational constraint added: {0:s}'.format(
+                constraint.__str__()))
 
     #--------------------------------------------------------------------------
     def _is_ready(self):
@@ -190,6 +213,11 @@ class Obsplanner(object):
             elif self.telescope.pos is None:
                 self.init_pos()
 
+        if self.instrument is None:
+            print('Obsplanner: WARNING: Cannot start scheduler. No ' \
+                  'instrument set.')
+            ready = False
+
         if self.sources is None:
             print('Obsplanner: WARNING: Cannot start scheduler. No sources' \
                   ' set.')
@@ -203,7 +231,7 @@ class Obsplanner(object):
         return ready
 
     #--------------------------------------------------------------------------
-    def run_scheduler(self):
+    def run_scheduler(self, duration='day'):
         """Run the scheduler.
         """
 
@@ -213,7 +241,7 @@ class Obsplanner(object):
         print('\nStarting scheduler..')
         self.scheduler.run(
                 self.telescope, self.sources, self.constraints,
-                sunset='astronomical', duration='day', start_time=None,
+                duration=duration, twilight='astronomical', start_time=None,
                 time_frame='utc')
 
 
@@ -240,12 +268,17 @@ if __name__ == "__main__":
     coord = SkyCoord('75d12m14.1035s', '24d53m57s')
     #obsplanner.init_pos(coord)
 
+    instrument = InstrumentSimple(100., 0., name='WALOP')
+    obsplanner.set_instrument(instrument)
+
     dtype = [('name', 'S30'), ('ra', float), ('dec', float), ('expt', float),
              ('expn', int)]
     targets = np.loadtxt(
             'sourcelists/targets.csv', dtype=dtype, skiprows=1, delimiter=',',
             usecols=range(5))
-    sources = Sources(targets['name'], targets['ra'], targets['dec'])
+    sources = Sources(
+            targets['name'], targets['ra'], targets['dec'], targets['expt'],
+            targets['expn'])
     obsplanner.set_sources(sources)
 
     airmass_limit = AirmassLimit(2.)
@@ -260,7 +293,9 @@ if __name__ == "__main__":
 
     scheduler = SimpleScheduler()
     obsplanner.set_scheduler(scheduler)
-    obsplanner.run_scheduler()
+    obsplanner.run_scheduler(duration='night')
+    print(obsplanner.scheduler.time_start)
+    print(obsplanner.scheduler.time_stop)
 
 
 

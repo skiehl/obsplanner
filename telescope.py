@@ -4,7 +4,7 @@
 """
 
 from abc import ABCMeta, abstractmethod
-from astropy.coordinates import AltAz, Angle, EarthLocation, SkyCoord
+from astropy.coordinates import AltAz, Angle, EarthLocation, SkyCoord, get_sun
 from astropy.time import Time
 import astropy.units as u
 import numpy as np
@@ -298,6 +298,87 @@ class Telescope(object, metaclass=ABCMeta):
         # implement in child class
         pass
 
+    #--------------------------------------------------------------------------
+    def get_time(self):
+        """Get the telescope's current date and time.
+
+        Returns
+        -----
+        out : astropy.Time
+            Current date and time of the telescope.
+        """
+
+        if self.time is None:
+            raise ValueError('No date and time set yet.')
+
+        return self.time
+
+    #--------------------------------------------------------------------------
+    def next_sun_set_rise(self, twilight):
+        """
+        """
+
+        if isinstance(twilight, float):
+            sunset = twilight * u.deg
+        elif twilight == 'astronomical':
+            sunset = -18. * u.deg
+        elif twilight == 'nautical':
+            sunset = -12. * u.deg
+        elif twilight == 'civil':
+            sunset = -6. * u.deg
+        elif twilight == 'sunset':
+            sunset = 0. * u.deg
+        else:
+            raise ValueError(
+                "Either set a float or chose from 'astronomical', 'nautical'" \
+                " 'civil', or 'sunset'.")
+
+        print('Current time:    ', self.time)
+        time = self.time + np.arange(0., 48., 0.1) * u.h
+        frame = AltAz(obstime=time, location=self.loc)
+        sun = get_sun(time).transform_to(frame)
+        sun_alt = sun.alt
+        night = sun_alt < sunset
+
+        if np.all(night):
+            print('NOTE: Sun never sets!')
+            return False
+
+        if np.all(~night):
+            print('WARNING: Sun never rises!')
+            return False
+
+        # current time is at night, find next sun set and following sun rise:
+        if night[0]:
+            print('NOTE: current time is night time.')
+            # index of next sun rise:
+            i = np.argmax(~night)
+            # index of next sun set:
+            i += np.argmax(night[i:])
+            # index of following sun rise:
+            j = i + np.argmax(~night[i:]) - 1
+
+        # current time is at day, find next sun set and sun rise:
+        else:
+            # index of next sun set:
+            i = np.argmax(night)
+            # index of following sun rise:
+            j = i + np.argmax(~night[i:]) - 1
+
+
+        # interpolate linearly:
+        interp = (sunset.value - sun_alt[i-1].deg) \
+                / (sun_alt[i].deg - sun_alt[i-1].deg)
+        time_sunset = time[i-1] + (time[i] - time[i-1]) * interp
+        interp = (sunset.value - sun_alt[j].deg) \
+                / (sun_alt[j+1].deg - sun_alt[j].deg)
+        time_sunrise = time[j] + (time[j+1] - time[j]) * interp
+
+        print('Next night start:', time_sunset)
+        print('Next night stop: ', time_sunrise)
+
+        return time_sunset, time_sunrise
+
 #==============================================================================
 
 class TelescopeEq(Telescope):
@@ -330,7 +411,6 @@ class TelescopeEq(Telescope):
         """
 
         super().__init__(lat, lon, height, name=name)
-        print(self.name)
         self.slew_model_ra = None
         self.slew_model_dec = None
 

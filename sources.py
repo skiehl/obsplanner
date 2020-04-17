@@ -78,9 +78,11 @@ class Sources:
         self.scheduled = np.ones(self.coord.size, dtype=bool)
         self.size = self.name.size
 
+        print('Source list created with {0:d} sources.'.format(self.size))
+
     #--------------------------------------------------------------------------
     def __len__(self):
         return self.size
-        
-    
+
+
 

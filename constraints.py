@@ -37,13 +37,13 @@ class Constraints(object):
     def __str__(self):
         """String representation.
         """
-    
+
         text = 'Set of observational constraints:\n'
         for constraint in self.constraints:
             text = '{0:s}* {1:s}\n'.format(text, constraint.__str__())
-        
+
         return text
-    
+
 
     #--------------------------------------------------------------------------
     def add(self, constraint):
@@ -59,14 +59,14 @@ class Constraints(object):
     #--------------------------------------------------------------------------
     def get(self, source_coord, telescope):
         """Evaluate all constraints jointly.
-        
+
         Parameters
         -----
         source_coord : astropy.SkyCoord
             Coordinates of the target sources.
         telescope : Telescope
             Provides the telescope position and current date and time.
-        
+
         Returns
         -----
         out : numpy.ndarray
@@ -92,7 +92,7 @@ class Constraint(object, metaclass=ABCMeta):
     @abstractmethod
     def __init__(self):
         """Create Constraint instance.
-        
+
         Notes
         -----
         Abstract method. Parameters depend on the specific constraint.
@@ -102,7 +102,7 @@ class Constraint(object, metaclass=ABCMeta):
     @abstractmethod
     def __str__(self):
         """String representation.
-        
+
         Notes
         -----
         Abstract method. String depends on the specific constraint.
@@ -113,21 +113,21 @@ class Constraint(object, metaclass=ABCMeta):
     def get(self, source_coord, telescope):
         """Evaluate the constraint for given targets, a specific location and
         time.
-        
+
         Parameters
         -----
         source_coord : astropy.SkyCoord
             Coordinates of the target sources.
         telescope : Telescope
             Provides the telescope position and current date and time.
-        
+
         Returns
         -----
         out : numpy.ndarray
             Array of boolean values. One entry for each input coordinate.
             The entry is True, if the source is observable according to the
             constraint, and False otherwise.
-        
+
         Notes
         -----
         Abstract method. The implementation needs to specified in the
@@ -144,7 +144,7 @@ class ElevationLimit(Constraint):
     #--------------------------------------------------------------------------
     def __init__(self, limit):
         """Create ElevationLimit instance.
-        
+
         Parameters
         -----
         limit : float
@@ -157,21 +157,21 @@ class ElevationLimit(Constraint):
     def __str__(self):
         """String representation.
         """
-        
+
         return 'Elevation limit: {0:.2f}'.format(self.limit)
 
     #--------------------------------------------------------------------------
     def get(self, source_coord, telescope):
         """Evaluate the constraint for given targets, a specific location and
         time.
-        
+
         Parameters
         -----
         source_coord : astropy.SkyCoord
             Coordinates of the target sources.
         telescope : Telescope
             Provides the telescope position and current date and time.
-        
+
         Returns
         -----
         out : numpy.ndarray
@@ -195,7 +195,7 @@ class AirmassLimit(Constraint):
     #--------------------------------------------------------------------------
     def __init__(self, limit, conversion="secz"):
         """Create AirmassLimit instance.
-        
+
         Parameters
         -----
         limit : float
@@ -214,21 +214,21 @@ class AirmassLimit(Constraint):
     def __str__(self):
         """String representation.
         """
-        
+
         return 'Airmass limit: {0:.2f}'.format(self.limit)
 
     #--------------------------------------------------------------------------
     def get(self, source_coord, telescope):
         """Evaluate the constraint for given targets, a specific location and
         time.
-        
+
         Parameters
         -----
         source_coord : astropy.SkyCoord
             Coordinates of the target sources.
         telescope : Telescope
             Provides the telescope position and current date and time.
-        
+
         Returns
         -----
         out : numpy.ndarray
@@ -238,7 +238,7 @@ class AirmassLimit(Constraint):
         """
 
         altaz = source_coord.transform_to(telescope.frame)
-        observable = ut.alt_to_airmass(altaz.al, conversion=self.conversion) \
+        observable = ut.alt_to_airmass(altaz.alt, conversion=self.conversion) \
                 <= self.limit
         #observable = np.array(observable, dtype=float)
 
@@ -253,7 +253,7 @@ class SunDistance(Constraint):
     #--------------------------------------------------------------------------
     def __init__(self, limit):
         """Create SunDistance instance.
-        
+
         Parameters
         -----
         limit : float
@@ -267,21 +267,21 @@ class SunDistance(Constraint):
     def __str__(self):
         """String representation.
         """
-        
+
         return 'Sun distance: {0:.2f}'.format(self.limit)
 
     #--------------------------------------------------------------------------
     def get(self, source_coord, telescope):
         """Evaluate the constraint for given targets, a specific location and
         time.
-        
+
         Parameters
         -----
         source_coord : astropy.SkyCoord
             Coordinates of the target sources.
         telescope : Telescope
             Provides the telescope position and current date and time.
-        
+
         Returns
         -----
         out : numpy.ndarray
@@ -307,7 +307,7 @@ class MoonDistance(Constraint):
     #--------------------------------------------------------------------------
     def __init__(self, limit):
         """Create MoonDistance instance.
-        
+
         Parameters
         -----
         limit : float
@@ -321,21 +321,21 @@ class MoonDistance(Constraint):
     def __str__(self):
         """String representation.
         """
-        
+
         return 'Moon distance: {0:.2f}'.format(self.limit)
 
     #--------------------------------------------------------------------------
     def get(self, source_coord, telescope):
         """Evaluate the constraint for given targets, a specific location and
         time.
-        
+
         Parameters
         -----
         source_coord : astropy.SkyCoord
             Coordinates of the target sources.
         telescope : Telescope
             Provides the telescope position and current date and time.
-        
+
         Returns
         -----
         out : numpy.ndarray
@@ -363,7 +363,7 @@ class MoonPolarization(Constraint):
     #--------------------------------------------------------------------------
     def __init__(self, limit):
         """Create MoonPolarization instance.
-        
+
         Parameters
         -----
         limit : float
@@ -380,21 +380,21 @@ class MoonPolarization(Constraint):
     def __str__(self):
         """String representation.
         """
-        
+
         return 'Moon polarization: {0:.2f}'.format(self.limit)
 
     #--------------------------------------------------------------------------
     def get(self, source_coord, telescope):
         """Evaluate the constraint for given targets, a specific location and
         time.
-        
+
         Parameters
         -----
         source_coord : astropy.SkyCoord
             Coordinates of the target sources.
         telescope : Telescope
             Provides the telescope position and current date and time.
-        
+
         Returns
         -----
         out : numpy.ndarray

@@ -4,6 +4,10 @@
 """
 
 from abc import ABCMeta, abstractmethod
+from astropy.coordinates import get_sun
+from astropy.time import Time
+import astropy.units as u
+import numpy as np
 
 __author__ = "Sebastian Kiehlmann"
 __credits__ = ["Sebastian Kiehlmann"]
@@ -27,20 +31,47 @@ class Scheduler(object, metaclass=ABCMeta):
         """
         """
 
+        self.time_start = None
+        self.time_stop = None
+
+    #--------------------------------------------------------------------------
+    def _get_time_range(
+            self, telescope, twilight, start_time, time_frame):
+        """
+        """
+
+        # day observations:
+        if not twilight:
+            # TODO
+            raise NotImplementedError()
+
+        # night observations:
+        else:
+            self.time_start, self.time_stop = telescope.next_sun_set_rise(
+                twilight)
+
     #--------------------------------------------------------------------------
     @abstractmethod
-    def run(self, telescope, sources, constraints, sunset='astronomical',
-            duration='day', start_time=None, time_frame='utc'):
+    def run(self, telescope, sources, constraints, duration=None,
+            twilight='astronomical', start_time=None, time_frame='utc'):
         """
         """
 
         # TODO: allow following options:
-        # sunset: 'astronomical', 'nautical', 'civic', float, False
-        # duration: 'day' (schedule one day/night), None/False/0 (as many
-        # days/nights as necessary to schedule all sources)
-        # start_time: e.g. 22:00:00; is overwritten when sunset is defined.
-        # time_frame: 'utc', 'local','lst'; defines which frame is used for
-        # start_time
+        # duration: if None, schedule as many days as needed to observe all
+        #    sources, otherwise give integer for number of days
+        # twilight: if False, schedule full day, otherwise schedule only
+        #    observations at night with the following options defining start
+        #    and end of the night: 'astronomical' (-18 deg Sun altitude),
+        #    'nautical' (-12 deg), 'civic' (-6 deg), 'sunset' (0 deg), or float
+        #    to set a specific Sun altitude limit
+        # start_time: e.g. 22:00:00;
+        #    day observations: start at that time
+        #    night observations: start_time is ignored
+        # time_frame:
+        #    'utc' default
+        #    'lst' only works for day observations, sidereal days are used,
+        #          start_time is interpreted as sidereal hour
 
         # program outline:
         # 1. get start time based on sunset, start_time, time_frame
@@ -56,6 +87,7 @@ class Scheduler(object, metaclass=ABCMeta):
         # info about the schedule, e.g. total time, total slew time, total obs
         # time, total wait time, number of sources, etc...
 
+
 #==============================================================================
 
 class SimpleScheduler(Scheduler):
@@ -66,6 +98,18 @@ class SimpleScheduler(Scheduler):
     def __init__(self):
         """
         """
+
+        self.time_start = None
+        self.time_stop = None
+
+    #--------------------------------------------------------------------------
+    def run(self, telescope, sources, constraints, duration=None,
+            twilight='astronomical', start_time=None, time_frame='utc'):
+        """
+        """
+
+        self._get_time_range(
+            telescope, twilight, start_time, time_frame)
 
 #==============================================================================
 
