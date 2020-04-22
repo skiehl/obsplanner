@@ -5,6 +5,7 @@
 
 from abc import ABCMeta, abstractmethod
 from astropy.time import TimeDelta
+import astropy.units as u
 
 __author__ = "Sebastian Kiehlmann"
 __credits__ = ["Sebastian Kiehlmann"]
@@ -44,16 +45,16 @@ class InstrumentSimple(Instrument):
     def __init__(self, readout_time, overhead_time, name=''):
         """
         """
-        
+
         self.name = name
-        self.readout_time = TimeDelta(readout_time, format='sec')
-        self.overhead_time = TimeDelta(overhead_time, format='sec')
-        self.time_per_obs = self.readout_time + self.overhead_time
+        self.readout_time = readout_time * u.s
+        self.overhead_time = overhead_time * u.s
 
     #--------------------------------------------------------------------------
     def get_obs_time(self, exposure_time, exposure_rep):
         """
         """
-        
-        obs_time = exposure_time + exposure_rep * self.time_per_obs
+
+        obs_time = (exposure_time + self.readout_time + self.overhead_time) \
+                * exposure_rep
         return obs_time

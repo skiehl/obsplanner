@@ -217,7 +217,7 @@ class Telescope(object, metaclass=ABCMeta):
         return False
 
     #--------------------------------------------------------------------------
-    def set_time(self, time):
+    def set_time(self, time, verbose=True):
         """Set current time.
 
         Parameters
@@ -225,6 +225,8 @@ class Telescope(object, metaclass=ABCMeta):
         time : astropy.Time
             Date and time in UTC. Accepts any input format that astropy.Time is
             accepting.
+        verbose : bool, default=True
+            If True, print out information.
 
         Returns
         -----
@@ -233,6 +235,9 @@ class Telescope(object, metaclass=ABCMeta):
 
         self.time = Time(time, scale='utc', location=self.loc)
         self.frame = AltAz(obstime=self.time, location=self.loc)
+
+        if verbose:
+            print('Telescope: time set to:', time)
 
     #--------------------------------------------------------------------------
     def set_pos(self, coord):
@@ -523,9 +528,10 @@ class TelescopeEq(Telescope):
             time.append(t_dome)
 
         # take maximum of all axes:
-        time = np.maximum.reduce(time)
+        unit = t_ra._unit
+        time_max = np.maximum.reduce(time) * unit
 
-        return time
+        return time_max
 
 #==============================================================================
 

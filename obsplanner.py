@@ -146,9 +146,8 @@ class Obsplanner(object):
         if self.telescope is None:
             print('Obsplanner: WARNING: No time set. Set telescope first.')
         else:
+            print('Obsplanner: Initial date+time:', time)
             self.telescope.set_time(time)
-            print('Obsplanner: Initial date+time:',
-                  self.telescope.time)
 
     #--------------------------------------------------------------------------
     def init_pos(self, coord='zenith'):
@@ -191,7 +190,7 @@ class Obsplanner(object):
         """
 
         self.constraints.add(constraint)
-        print('Observational constraint added: {0:s}'.format(
+        print('Obsplanner: constraint added: {0:s}'.format(
                 constraint.__str__()))
 
     #--------------------------------------------------------------------------
@@ -231,7 +230,7 @@ class Obsplanner(object):
         return ready
 
     #--------------------------------------------------------------------------
-    def run_scheduler(self, duration='day'):
+    def run_scheduler(self, duration=None):
         """Run the scheduler.
         """
 
@@ -240,11 +239,9 @@ class Obsplanner(object):
 
         print('\nStarting scheduler..')
         self.scheduler.run(
-                self.telescope, self.sources, self.constraints,
-                duration=duration, twilight='astronomical', start_time=None,
-                time_frame='utc')
-
-
+                self.telescope, self.instrument, self.sources,
+                self.constraints, duration=duration, twilight='astronomical',
+                start_time=None, time_frame='utc')
 
 #==============================================================================
 # MAIN
@@ -263,7 +260,7 @@ if __name__ == "__main__":
     telescope.set_slew_model('dec', slewmodel_dec)
     #telescope.set_slew_model('dome', slewmodel_dome)
     obsplanner.set_telescope(telescope)
-    obsplanner.init_time('2019-11-01 00:00:00')
+    obsplanner.init_time('2019-06-01 00:00:00')
     #obsplanner.init_pos()
     coord = SkyCoord('75d12m14.1035s', '24d53m57s')
     #obsplanner.init_pos(coord)
@@ -274,8 +271,8 @@ if __name__ == "__main__":
     dtype = [('name', 'S30'), ('ra', float), ('dec', float), ('expt', float),
              ('expn', int)]
     targets = np.loadtxt(
-            'sourcelists/targets.csv', dtype=dtype, skiprows=1, delimiter=',',
-            usecols=range(5))
+            'unittests/sourcelists/targets_fewer.csv', dtype=dtype, skiprows=1,
+            delimiter=',', usecols=range(5))
     sources = Sources(
             targets['name'], targets['ra'], targets['dec'], targets['expt'],
             targets['expn'])
@@ -293,9 +290,7 @@ if __name__ == "__main__":
 
     scheduler = SimpleScheduler()
     obsplanner.set_scheduler(scheduler)
-    obsplanner.run_scheduler(duration='night')
-    print(obsplanner.scheduler.time_start)
-    print(obsplanner.scheduler.time_stop)
+    obsplanner.run_scheduler(duration=None)
 
 
 

@@ -81,6 +81,23 @@ class Constraints(object):
 
         return observable
 
+    #--------------------------------------------------------------------------
+    def get_elevation_limit(self):
+        """
+
+
+        Returns
+        -------
+        None.
+
+        """
+
+        limit = []
+        for constraint in self.constraints:
+            if isinstance(constraint, ElevationLimit):
+                pass
+
+
 #==============================================================================
 
 class Constraint(object, metaclass=ABCMeta):
@@ -185,6 +202,22 @@ class ElevationLimit(Constraint):
         #observable = np.array(observable, dtype=float)
 
         return observable
+
+    #--------------------------------------------------------------------------
+    def get_limit(self):
+        """Returns the set limit.
+
+        Parameters
+        -----
+        None.
+
+        Returns
+        -----
+        out : astropy.units.quantity.Quantity
+            Elevation limit in degrees.
+        """
+
+        return self.limit
 
 #==============================================================================
 
