@@ -9,9 +9,10 @@ import numpy as np
 from constraints import Constraint, Constraints
 from constraints import AirmassLimit, ElevationLimit, SunDistance, MoonDistance, MoonPolarization
 from instrument import Instrument, InstrumentSimple
-from scheduler import Scheduler, SimpleScheduler
+from scheduler import Scheduler, SchedulerNearestNeighbor
 from sources import Sources
 from telescope import Telescope, TelescopeEq, SlewModelLinear
+import visualize as vis
 
 __author__ = "Sebastian Kiehlmann"
 __credits__ = ["Sebastian Kiehlmann"]
@@ -271,7 +272,8 @@ if __name__ == "__main__":
     dtype = [('name', 'S30'), ('ra', float), ('dec', float), ('expt', float),
              ('expn', int)]
     targets = np.loadtxt(
-            'unittests/sourcelists/targets_fewer.csv', dtype=dtype, skiprows=1,
+            #'unittests/sourcelists/targets_fewer.csv', dtype=dtype, skiprows=1,
+            'unittests/sourcelists/targets.csv', dtype=dtype, skiprows=1,
             delimiter=',', usecols=range(5))
     sources = Sources(
             targets['name'], targets['ra'], targets['dec'], targets['expt'],
@@ -288,11 +290,9 @@ if __name__ == "__main__":
     obsplanner.add_constraint(moon_distance)
     obsplanner.add_constraint(moon_polarization)
 
-    scheduler = SimpleScheduler()
+    scheduler = SchedulerNearestNeighbor()
     obsplanner.set_scheduler(scheduler)
-    obsplanner.run_scheduler(duration=None)
-
-
+    obsplanner.run_scheduler(duration=1)
 
     #telescope.set_time('2019-11-01 00:00:00')
     #telescope.set_to_zenith()
