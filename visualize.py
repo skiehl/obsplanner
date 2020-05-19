@@ -21,19 +21,18 @@ __status__ = "Production"
 #==============================================================================
 
 def ax_add_obs(obs, ax):
-    """
-
+    """Add plot of one observation to given axis.
 
     Parameters
     ----------
-    obs : TYPE
-        DESCRIPTION.
-    ax : TYPE
-        DESCRIPTION.
+    obs : obsplanner.scheduler.Observation
+        Scheduled observation.
+    ax : matplotlib.axes._subplots.AxesSubplot
+        The figure axis to plot into.
 
     Returns
     -------
-    None.
+    None
     """
 
     linewidth = 1
@@ -64,12 +63,20 @@ def ax_add_obs(obs, ax):
 
 #------------------------------------------------------------------------------
 def plot_block(block, utc_offset=0):
-    """
+    """Visualize time usage of one observation block.
 
+    Parameters
+    -------
+    block : obsplanner.scheduler.ObsBlock
+        Observing block that should be visualized.
+    utc_offset : int, default=0
+        UTC offset for the time zone the telescope is located in. Used to show
+        the local time on the x-axis.
 
     Returns
     -------
-    None.
+    fig : matplotlib.figure.Figure
+        The created figure.
     """
 
     linewidth = 1
@@ -136,4 +143,5 @@ def plot_block(block, utc_offset=0):
     ax[1].set_xticks([1,2,3])
     ax[1].set_xticklabels(labels)
     plt.setp(ax[1].xaxis.get_majorticklabels(), rotation=45)
+
     return fig
