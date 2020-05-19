@@ -28,32 +28,32 @@ class Observation(object):
     def __init__(
             self, source_id, source_name, source_coord, exp_time, exp_rep,
             time_start, time_slew, time_obs, time_tot):
-        """Create Observation instance.
+        """Observation of one source.
 
         Parameters
         ----------
-        source_id : TYPE
-            DESCRIPTION.
-        source_name : TYPE
-            DESCRIPTION.
-        source_coord : TYPE
-            DESCRIPTION.
-        exp_time : TYPE
-            DESCRIPTION.
-        exp_rep : TYPE
-            DESCRIPTION.
-        time_start : TYPE
-            DESCRIPTION.
-        time_slew : TYPE
-            DESCRIPTION.
-        time_obs : TYPE
-            DESCRIPTION.
-        time_tot : TYPE
-            DESCRIPTION.
+        source_id : int
+            Source ID.
+        source_name : str
+            Source name.
+        source_coord : astropy.coordinates.SkyCoord
+            Source coordinates.
+        exp_time : float
+            Duration of a single exposure.
+        exp_rep : int
+            Number of exposure repetitions.
+        time_start : astropy.time.Time
+            Time when moving to the source for an observation starts.
+        time_slew : astropy.units.quantity.Quantity
+            Slew time in seconds.
+        time_obs : astropy.units.quantity.Quantity
+            Observation time in seconds.
+        time_tot : astropy.units.quantity.Quantity
+            Slew and observation time in seconds.
 
         Returns
         -------
-        None.
+        None
         """
 
         self.source_id = source_id
@@ -69,23 +69,25 @@ class Observation(object):
 #==============================================================================
 
 class ObsBlock(object):
-    """
+    """Observation block.
     """
 
     #--------------------------------------------------------------------------
     def __init__(self, block_id, time_start, time_stop):
-        """
+        """Observation block.
 
         Parameters
         ----------
-        time_start : TYPE
-            DESCRIPTION.
-        time_stop : TYPE
-            DESCRIPTION.
+        block_id : int
+            Observation block ID.
+        time_start : astropy.time.Time
+            Time when the observation block starts.
+        time_stop : astropy.time.Time
+            Time when the observation block ends.
 
         Returns
         -------
-        None.
+        None
         """
 
         self.id = block_id
@@ -101,25 +103,23 @@ class ObsBlock(object):
 
     #--------------------------------------------------------------------------
     def __len__(self):
-        """
-
+        """Number of observations.
 
         Returns
         -------
-        None.
-
+        None
         """
 
         return self.n_obs
 
     #--------------------------------------------------------------------------
     def __str__(self):
-        """
-
+        """Information about the observation block.
 
         Returns
         -------
-        None.
+        str
+            Printed information about the observation block.
         """
 
         return self.summary()
@@ -128,34 +128,32 @@ class ObsBlock(object):
     def add_observation(
             self, source_id, source_name, source_coord, source_exp, source_rep,
             time_start, time_slew, time_obs, time_tot):
-        """
-
+        """Add new observation to the observation block.
 
         Parameters
         ----------
-        source_id : TYPE
-            DESCRIPTION.
-        source_name : TYPE
-            DESCRIPTION.
-        source_coord : TYPE
-            DESCRIPTION.
-        source_exp : TYPE
-            DESCRIPTION.
-        source_rep : TYPE
-            DESCRIPTION.
-        time_now : TYPE
-            DESCRIPTION.
-        time_slew : TYPE
-            DESCRIPTION.
-        time_obs : TYPE
-            DESCRIPTION.
-        time_tot : TYPE
-            DESCRIPTION.
+        source_id : int
+            Source ID.
+        source_name : str
+            Source name.
+        source_coord : astropy.coordinates.SkyCoord
+            Source coordinates.
+        exp_time : float
+            Duration of a single exposure.
+        exp_rep : int
+            Number of exposure repetitions.
+        time_start : astropy.time.Time
+            Time when moving to the source for an observation starts.
+        time_slew : astropy.units.quantity.Quantity
+            Slew time in seconds.
+        time_obs : astropy.units.quantity.Quantity
+            Observation time in seconds.
+        time_tot : astropy.units.quantity.Quantity
+            Slew and observation time in seconds.
 
         Returns
         -------
-        None.
-
+        None
         """
 
         # create observation:
@@ -174,14 +172,12 @@ class ObsBlock(object):
 
     #--------------------------------------------------------------------------
     def summary(self):
-        """
-
+        """Information about the observation block.
 
         Returns
         -------
-        info : TYPE
-            DESCRIPTION.
-
+        info : str
+            Printed information about the observation block.
         """
 
         slew_ratio = self.time_slew / self.duration * 100.
@@ -207,18 +203,13 @@ class ObsBlock(object):
 
     #--------------------------------------------------------------------------
     def get_observations(self):
-        """
-
+        """Iterator over stored observations.
 
         Yields
         ------
-        TYPE
-            DESCRIPTION.
-
+        obsplanner.scheduler.Observation
+            Observations.
         """
-
-        if self.n_obs == 0:
-            return False
 
         for observation in self.observations:
             yield observation
@@ -226,17 +217,16 @@ class ObsBlock(object):
 #==============================================================================
 
 class Schedule(object):
-    """
+    """Observation schedule.
     """
 
     #--------------------------------------------------------------------------
     def __init__(self):
-        """
+        """Observation schedule.
 
         Returns
         -------
-        None.
-
+        None
         """
 
         self.blocks = []
@@ -246,22 +236,19 @@ class Schedule(object):
 
     #--------------------------------------------------------------------------
     def add_obsblock(self, time_start, time_stop):
-        """
+        """Add observation block to schedule.
 
 
         Parameters
         ----------
-        block : TYPE
-            DESCRIPTION.
-        time_start : TYPE
-            DESCRIPTION.
-        time_stop : TYPE
-            DESCRIPTION.
+        time_start : astropy.time.Time
+            Time when the observation block starts.
+        time_stop : astropy.time.Time
+            Time when the observation block ends.
 
         Returns
         -------
-        None.
-
+        None
         """
 
         self.blocks.append(ObsBlock(self.n_blocks, time_start, time_stop))
@@ -272,39 +259,37 @@ class Schedule(object):
     def add_observation(
             self, source_id, source_name, source_coord, source_exp, source_rep,
             time_start, time_slew, time_obs, time_tot):
-        """
-
+        """Add new observation to the observation block.
 
         Parameters
         ----------
-        source_id : TYPE
-            DESCRIPTION.
-        source_name : TYPE
-            DESCRIPTION.
-        source_coord : TYPE
-            DESCRIPTION.
-        source_exp : TYPE
-            DESCRIPTION.
-        source_rep : TYPE
-            DESCRIPTION.
-        time_start : TYPE
-            DESCRIPTION.
-        time_slew : TYPE
-            DESCRIPTION.
-        time_obs : TYPE
-            DESCRIPTION.
-        time_tot : TYPE
-            DESCRIPTION.
+        source_id : int
+            Source ID.
+        source_name : str
+            Source name.
+        source_coord : astropy.coordinates.SkyCoord
+            Source coordinates.
+        exp_time : float
+            Duration of a single exposure.
+        exp_rep : int
+            Number of exposure repetitions.
+        time_start : astropy.time.Time
+            Time when moving to the source for an observation starts.
+        time_slew : astropy.units.quantity.Quantity
+            Slew time in seconds.
+        time_obs : astropy.units.quantity.Quantity
+            Observation time in seconds.
+        time_tot : astropy.units.quantity.Quantity
+            Slew and observation time in seconds.
+
+        Returns
+        -------
+        None
 
         Raises
         ------
         AttributeError
-            DESCRIPTION.
-
-        Returns
-        -------
-        None.
-
+            When no observing block has been set yet.
         """
 
         if self.n_blocks == 0:
@@ -319,18 +304,14 @@ class Schedule(object):
 
     #--------------------------------------------------------------------------
     def get_blocks(self):
-        """
+        """Iterator over observing blocks.
 
 
         Yields
         ------
-        TYPE
-            DESCRIPTION.
-
+        obsplanner.scheduler.ObsBlock
+            Observing block.
         """
-
-        if self.n_blocks == 0:
-            return False
 
         for block in self.blocks:
             yield block
@@ -338,13 +319,22 @@ class Schedule(object):
 #==============================================================================
 
 class Scheduler(object, metaclass=ABCMeta):
-    """
+    """Scheduler. Finds an optimized order of target sources.
+
+    Notes
+    ------
+    This is an abstract base class. Different types of schedulers are
+    implemented based on this parent class.
     """
 
     #--------------------------------------------------------------------------
     @abstractmethod
     def __init__(self):
-        """
+        """Scheduler. Finds an optimized order of target sources.
+
+        Returns
+        ------
+        None
         """
 
         self.time_start = None
@@ -355,14 +345,14 @@ class Scheduler(object, metaclass=ABCMeta):
 
     #--------------------------------------------------------------------------
     def _check_schedule(self):
-        """
-
+        """Check if schedule exists.
 
         Returns
         -------
         bool
-            DESCRIPTION.
-
+            True, if the scheduler should proceed to run and create a new
+            schedule.
+            False, if the scheduler should abort and keep the current schedule.
         """
 
         if self.schedule is not None:
@@ -378,8 +368,37 @@ class Scheduler(object, metaclass=ABCMeta):
     #--------------------------------------------------------------------------
     def _get_time_range(
             self, telescope, twilight, start_time, time_frame):
+        """Calculate time range for the next observing block.
+
+        Parameters
+        ----------
+        telescope : obsplanner.telescope.Telescope
+            Defines the position of the observatory.
+        twilight : str or float
+            Select the Sun elevation at which observations should start/end.
+            Choose from 'astronomical' (-18 deg), 'nautical' (-12 deg),
+            'civil' (-6 deg), 'sunset' (0 deg). Or use float to set Sun
+            elevation (in degrees).
+        start_time : TYPE
+            DESCRIPTION.
+        time_frame : TYPE
+            DESCRIPTION.
+
+        Raises
+        ------
+        NotImplementedError
+            Raised if twilight is not set or when a time_frame other than
+            'utc' is given.
+
+        Returns
+        -------
+        None
         """
-        """
+
+        # TODO: use of time_frame and start_time not implemented yet
+        if time_frame != 'utc':
+            # TODO
+            raise NotImplementedError()
 
         # day observations:
         if not twilight:
@@ -400,11 +419,11 @@ class Scheduler(object, metaclass=ABCMeta):
 
         Parameters
         -------
-        telescope : Telescope instance
+        telescope : obsplanner.telescope.Telescope
             Defines the telescope location and current time.
-        sources : Sources instance
+        sources : obsplanner.sources.Sources
             Sources that should be scheduled.
-        constraints : Constraints instance
+        constraints : obsplanner.constraints.Constraints
             Defines observational constraints.
         interval : float, default=5.
             Time interval in minutes. If no sources are observable at a given
@@ -414,9 +433,9 @@ class Scheduler(object, metaclass=ABCMeta):
 
         Returns
         -------
-        time_now : Time
+        astropy.time.Time
             The current time of the telescope at which the next sources are
-            observable.
+            observable. Returns False if no sources are observable.
         """
 
         # find observable sources:
@@ -455,7 +474,7 @@ class Scheduler(object, metaclass=ABCMeta):
     @abstractmethod
     def run(self, telescope, instrument, sources, constraints, duration=None,
             twilight='astronomical', start_time=None, time_frame='utc'):
-        """
+        """TODO
         """
 
         # TODO: allow following options:
@@ -492,12 +511,16 @@ class Scheduler(object, metaclass=ABCMeta):
 #==============================================================================
 
 class SchedulerNearestNeighbor(Scheduler):
-    """
+    """Scheduler picking the nearest neighbor.
     """
 
     #--------------------------------------------------------------------------
     def __init__(self):
-        """
+        """Scheduler picking the nearest neighbor.
+
+        Returns
+        -------
+        None
         """
 
         self.time_start = None
@@ -509,7 +532,47 @@ class SchedulerNearestNeighbor(Scheduler):
             self, telescope, instrument, sources, constraints, twilight,
             start_time, time_frame):
         """
+
+
+        Parameters
+        ----------
+        telescope : obsplanner.telescope.Telescope
+            Defines the telescope location and motion.
+        instrument : obsplanner.instrument.Instrument
+            Defines the time needed for observations.
+        sources : obsplanner.sources.Sources
+            Sources that should be scheduled.
+        constraints : obsplanner.constraints.Constraints
+            Defines observational constraints.
+        twilight : str or float
+            Select the Sun elevation at which observations should start/end.
+            Choose from 'astronomical' (-18 deg), 'nautical' (-12 deg),
+            'civil' (-6 deg), 'sunset' (0 deg). Or use float to set Sun
+            elevation (in degrees).
+        start_time : TYPE
+            DESCRIPTION.
+        time_frame : TYPE
+            DESCRIPTION.
+
+        Returns
+        -------
+        bool
+            True, if new observing block has been scheduled. False, otherwise.
+
+        Raises
+        ------
+        NotImplementedError
+            Raised if a time_frame other than 'utc' is given.
+
+        Notes
+        ------
+        Use of time_frame and start_time is not implemented yet.
         """
+
+        # TODO: use of time_frame and start_time not implemented yet
+        if time_frame != 'utc':
+            # TODO
+            raise NotImplementedError()
 
         # set telescope to start time:
         self._get_time_range(
@@ -573,7 +636,7 @@ class SchedulerNearestNeighbor(Scheduler):
     #--------------------------------------------------------------------------
     def run(self, telescope, instrument, sources, constraints, duration=None,
             twilight='astronomical', start_time=None, time_frame='utc'):
-        """
+        """TODO
         """
 
         # check if schedule exists:

@@ -320,7 +320,29 @@ class Telescope(object, metaclass=ABCMeta):
 
     #--------------------------------------------------------------------------
     def next_sun_set_rise(self, twilight):
-        """
+        """Calculate time of the next Sun set and Sun rise.
+
+        Parameters
+        ----------
+        twilight : str or float
+            Select the Sun elevation at which observations should start/end.
+            Choose from 'astronomical' (-18 deg), 'nautical' (-12 deg),
+            'civil' (-6 deg), 'sunset' (0 deg). Or use float to set Sun
+            elevation (in degrees).
+
+        Raises
+        ------
+        ValueError
+            If the input is not a float or from the list of allowed string
+            inputs.
+
+        Returns
+        -------
+        astropy.time.Time
+            Time of the next Sun set.
+        astropy.time.Time
+            Time of the following Sun rise.
+
         """
 
         if isinstance(twilight, float):
