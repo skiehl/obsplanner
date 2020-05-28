@@ -90,6 +90,12 @@ class Sources:
         return self.size
 
     #--------------------------------------------------------------------------
+    def observability(self, time_start, time_end, append=False):
+        # TODO
+        for i in range(self.size):
+            pass
+
+    #--------------------------------------------------------------------------
     def set_observable(self, source_id, observable, verbose=True):
         """Set which sources are currently observable.
 
@@ -132,6 +138,17 @@ class Sources:
         """
 
         self.scheduled[source_id] = True
+
+    #--------------------------------------------------------------------------
+    def reset_scheduled(self):
+        """Set all sources as not scheduled.
+
+        Returns
+        -------
+        None.
+        """
+
+        self.scheduled[:] = False
 
     #--------------------------------------------------------------------------
     def get_source(self, source_id):
@@ -352,5 +369,3 @@ class Sources:
         n = np.sum(sel)
 
         return n
-
-

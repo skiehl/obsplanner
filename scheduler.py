@@ -5,7 +5,9 @@
 
 from abc import ABCMeta, abstractmethod
 import astropy.units as u
+from copy import deepcopy
 import numpy as np
+import sys
 import textwrap
 
 __author__ = "Sebastian Kiehlmann"
@@ -127,7 +129,7 @@ class ObsBlock(object):
     #--------------------------------------------------------------------------
     def add_observation(
             self, source_id, source_name, source_coord, source_exp, source_rep,
-            time_start, time_slew, time_obs, time_tot):
+            time_start, time_slew, time_obs, time_tot, verbose=True):
         """Add new observation to the observation block.
 
         Parameters
@@ -168,7 +170,8 @@ class ObsBlock(object):
         self.time_obs += time_obs
         self.time_idle = self.duration - self.time_slew - self.time_obs
 
-        print("Schedule: observation added: {0:s}".format(source_name))
+        if verbose:
+            print("Schedule: observation added: {0:s}".format(source_name))
 
     #--------------------------------------------------------------------------
     def summary(self):
@@ -258,7 +261,7 @@ class Schedule(object):
     #--------------------------------------------------------------------------
     def add_observation(
             self, source_id, source_name, source_coord, source_exp, source_rep,
-            time_start, time_slew, time_obs, time_tot):
+            time_start, time_slew, time_obs, time_tot, verbose=True):
         """Add new observation to the observation block.
 
         Parameters
@@ -299,7 +302,7 @@ class Schedule(object):
 
         self.blocks[-1].add_observation(
                 source_id, source_name, source_coord, source_exp, source_rep,
-                time_start, time_slew, time_obs, time_tot)
+                time_start, time_slew, time_obs, time_tot, verbose=verbose)
         self.n_obs += 1
 
     #--------------------------------------------------------------------------
@@ -315,6 +318,31 @@ class Schedule(object):
 
         for block in self.blocks:
             yield block
+
+    #--------------------------------------------------------------------------
+    def get_time(self):
+        """Get the total observation, slew, and idle time.
+
+        Returns
+        -------
+        time_obs : astropy.units.quantity.Quantity
+            Total observation time.
+        time_slew : astropy.units.quantity.Quantity
+            Total slew time.
+        time_idle : astropy.units.quantity.Quantity
+            Total idle time.
+        """
+
+        time_obs = 0 * u.s
+        time_slew = 0 * u.s
+        time_idle = 0 * u.s
+
+        for block in self.get_blocks():
+            time_obs += block.time_obs
+            time_slew += block.time_slew
+            time_idle += block.time_idle
+
+        return time_obs, time_slew, time_idle
 
 #==============================================================================
 
@@ -367,7 +395,7 @@ class Scheduler(object, metaclass=ABCMeta):
 
     #--------------------------------------------------------------------------
     def _get_time_range(
-            self, telescope, twilight, start_time, time_frame):
+            self, telescope, twilight, start_time, time_frame, verbose=True):
         """Calculate time range for the next observing block.
 
         Parameters
@@ -408,13 +436,13 @@ class Scheduler(object, metaclass=ABCMeta):
         # night observations:
         else:
             self.time_start, self.time_stop = telescope.next_sun_set_rise(
-                twilight)
+                twilight, verbose=verbose)
             self.lst_start = self.time_start.sidereal_time('apparent')
             self.lst_stop = self.time_stop.sidereal_time('apparent')
 
     #--------------------------------------------------------------------------
     def _observable_sources(
-            self, telescope, sources, constraints, interval=5.):
+            self, telescope, sources, constraints, interval=5., verbose=True):
         """Determine the observable sources at a given time.
 
         Parameters
@@ -440,14 +468,14 @@ class Scheduler(object, metaclass=ABCMeta):
 
         # find observable sources:
         source_id, source_coord, __, __, __ = sources.get_sources(
-                active=True, scheduled=False)
+                active=True, scheduled=False, verbose=verbose)
         observable = constraints.get(source_coord, telescope)
-        sources.set_observable(source_id, observable)
+        sources.set_observable(source_id, observable, verbose=verbose)
         n = np.sum(observable)
 
         time_now = telescope.get_time()
 
-        if n == 0:
+        if n == 0 and verbose:
             print('Scheduler: No sources observable at', time_now)
             print('  Advancing in time..')
 
@@ -465,10 +493,169 @@ class Scheduler(object, metaclass=ABCMeta):
             n = np.sum(observable)
 
         if n > 0:
-            print('  Continue at', time_now)
+            if verbose:
+                print('  Continue at', time_now)
             return time_now
         else:
             return False
+
+    #--------------------------------------------------------------------------
+    def _schedule_block(
+            self, schedule, telescope, instrument, sources, constraints,
+            twilight, start_time, time_frame, verbose=True):
+        """
+
+
+        Parameters
+        ----------
+        schedule : obsplanner.scheduler.Schedule
+            The schedule to write into.
+        telescope : obsplanner.telescope.Telescope
+            Defines the telescope location and motion.
+        instrument : obsplanner.instrument.Instrument
+            Defines the time needed for observations.
+        sources : obsplanner.sources.Sources
+            Sources that should be scheduled.
+        constraints : obsplanner.constraints.Constraints
+            Defines observational constraints.
+        twilight : str or float
+            Select the Sun elevation at which observations should start/end.
+            Choose from 'astronomical' (-18 deg), 'nautical' (-12 deg),
+            'civil' (-6 deg), 'sunset' (0 deg). Or use float to set Sun
+            elevation (in degrees).
+        start_time : TYPE
+            DESCRIPTION.
+        time_frame : TYPE
+            DESCRIPTION.
+
+        Returns
+        -------
+        bool
+            True, if new observing block has been scheduled. False, otherwise.
+
+        Raises
+        ------
+        NotImplementedError
+            Raised if a time_frame other than 'utc' is given.
+
+        Notes
+        ------
+        Use of time_frame and start_time is not implemented yet.
+        """
+
+        # TODO: use of time_frame and start_time not implemented yet
+        if time_frame != 'utc':
+            raise NotImplementedError()
+
+        # set telescope to start time:
+        self._get_time_range(
+            telescope, twilight, start_time, time_frame, verbose=verbose)
+        telescope.set_time(self.time_start, verbose=verbose)
+
+        # create observation block:
+        schedule.add_obsblock(self.time_start, self.time_stop)
+
+        # count observable sources:
+        n_iter = sources.count_sources(active=True, scheduled=False)
+
+        # iterate for number of sources:
+        for __ in range(n_iter):
+            time_now = self._observable_sources(
+                telescope, sources, constraints, interval=5., verbose=verbose)
+            if time_now is False:
+                if verbose:
+                    print('Scheduler: end of observation window reached.')
+                break
+
+            # get available sources:
+            sources_id, sources_coord, sources_name, sources_exp, sources_rep \
+                    = sources.get_sources(
+                        active=True, scheduled=False, observable_now=True,
+                        verbose=verbose)
+
+            # select source:
+            i = self._select_source(
+                    telescope, sources_id, sources_coord, sources_name,
+                    sources_exp, sources_rep)
+
+            # get times:
+            time_slew = telescope.get_slew_time(sources_coord[i])
+            time_obs = instrument.get_obs_time(sources_exp[i], sources_rep[i])
+            time_tot = time_slew + time_obs
+            time_new = time_now + time_tot
+
+            # stop if new time exceeds stop time:
+            if time_new > self.time_stop:
+                if verbose:
+                    print('Scheduler: end of observation window reached.')
+                break
+
+            # add source to schedule:
+            if isinstance(sources_name[i], bytes):
+                source_name = sources_name[i].decode('UTF-8')
+            else:
+                source_name = sources_name[i]
+            schedule.add_observation(
+                i, source_name, sources_coord[i],
+                sources_exp[i], sources_rep[i], time_now, time_slew, time_obs,
+                time_tot, verbose=verbose)
+
+            # move telescope, set new time:
+            telescope.set_pos(sources_coord[i])
+            telescope.set_time(time_new, verbose=verbose)
+            sources.set_scheduled(sources_id[i])
+
+        block = schedule.last_block
+        if block.n_obs == 0:
+            return False
+
+        if verbose:
+            print(block.summary())
+        return True
+
+    #--------------------------------------------------------------------------
+    def _run(
+            self, schedule, telescope, instrument, sources, constraints,
+            duration=None, twilight='astronomical', start_time=None,
+            time_frame='utc', verbose=True):
+        """TODO
+        """
+
+        # schedule specific number of days:
+        if duration:
+            if verbose:
+                print('Scheduler: schedule {0:d} days'.format(duration))
+
+            # iterate through days:
+            for i in range(duration):
+                if verbose:
+                    print('Scheduler: schedule day {0:d}'.format(i+1))
+                done = self._schedule_block(
+                    schedule, telescope, instrument, sources, constraints,
+                    twilight, start_time, time_frame, verbose=verbose)
+
+                if not done:
+                    if verbose:
+                        print('Scheduler: no sources scheduled for this ' \
+                              'block. Abort.')
+                    break
+
+        # schedule all sources:
+        else:
+            i = 0
+            while sources.count_sources(scheduled=False) > 0:
+                if verbose:
+                    print('Scheduler: schedule day {0:d}'.format(i+1))
+                i += 1
+                done = self._schedule_block(
+                    schedule, telescope, instrument, sources, constraints,
+                    twilight, start_time, time_frame, verbose=verbose)
+
+                if not done:
+                    if verbose:
+                        print('Scheduler: no sources scheduled for this ' \
+                              'block. Abort.')
+                    break
 
     #--------------------------------------------------------------------------
     @abstractmethod
@@ -514,6 +701,8 @@ class SchedulerNearestNeighbor(Scheduler):
     """Scheduler picking the nearest neighbor.
     """
 
+    name = 'SchedulerNearestNeighbor'
+
     #--------------------------------------------------------------------------
     def __init__(self):
         """Scheduler picking the nearest neighbor.
@@ -528,114 +717,44 @@ class SchedulerNearestNeighbor(Scheduler):
         self.schedule = None
 
     #--------------------------------------------------------------------------
-    def _schedule_block(
-            self, telescope, instrument, sources, constraints, twilight,
-            start_time, time_frame):
+    def _select_source(
+            self, telescope, sources_id, sources_coord, sources_name,
+            sources_exp, sources_rep):
         """
 
 
         Parameters
         ----------
-        telescope : obsplanner.telescope.Telescope
-            Defines the telescope location and motion.
-        instrument : obsplanner.instrument.Instrument
-            Defines the time needed for observations.
-        sources : obsplanner.sources.Sources
-            Sources that should be scheduled.
-        constraints : obsplanner.constraints.Constraints
-            Defines observational constraints.
-        twilight : str or float
-            Select the Sun elevation at which observations should start/end.
-            Choose from 'astronomical' (-18 deg), 'nautical' (-12 deg),
-            'civil' (-6 deg), 'sunset' (0 deg). Or use float to set Sun
-            elevation (in degrees).
-        start_time : TYPE
+        telescope : TYPE
             DESCRIPTION.
-        time_frame : TYPE
+        sources_id : TYPE
+            DESCRIPTION.
+        sources_coord : TYPE
+            DESCRIPTION.
+        sources_name : TYPE
+            DESCRIPTION.
+        sources_exp : TYPE
+            DESCRIPTION.
+        sources_rep : TYPE
             DESCRIPTION.
 
         Returns
         -------
-        bool
-            True, if new observing block has been scheduled. False, otherwise.
+        i : TYPE
+            DESCRIPTION.
 
-        Raises
-        ------
-        NotImplementedError
-            Raised if a time_frame other than 'utc' is given.
-
-        Notes
-        ------
-        Use of time_frame and start_time is not implemented yet.
         """
 
-        # TODO: use of time_frame and start_time not implemented yet
-        if time_frame != 'utc':
-            # TODO
-            raise NotImplementedError()
+        # select shortest slew time:
+        slew_time = telescope.get_slew_time(sources_coord)
+        i = np.argmin(slew_time)
 
-        # set telescope to start time:
-        self._get_time_range(
-            telescope, twilight, start_time, time_frame)
-        telescope.set_time(self.time_start)
-
-        # create observation block:
-        self.schedule.add_obsblock(self.time_start, self.time_stop)
-
-        # count observable sources:
-        n_iter = sources.count_sources(active=True, scheduled=False)
-
-        # iterate for number of sources:
-        for __ in range(n_iter):
-            time_now = self._observable_sources(
-                telescope, sources, constraints, interval=5.)
-            if time_now is False:
-                print('Scheduler: end of observation window reached.')
-                break
-
-            # get slew time:
-            sources_id, sources_coord, sources_name, sources_exp, sources_rep \
-                    = sources.get_sources(
-                        active=True, scheduled=False, observable_now=True)
-            slew_time = telescope.get_slew_time(sources_coord)
-
-            # select shortest slew time:
-            i = np.argmin(slew_time)
-            time_slew = slew_time[i]
-            time_obs = instrument.get_obs_time(sources_exp[i], sources_rep[i])
-            time_tot = time_slew + time_obs
-            time_new = time_now + time_tot
-
-            # stop if new time exceeds stop time:
-            if time_new > self.time_stop:
-                print('Scheduler: end of observation window reached.')
-                break
-
-            # add source to schedule:
-            if isinstance(sources_name[i], bytes):
-                source_name = sources_name[i].decode('UTF-8')
-            else:
-                source_name = sources_name[i]
-            self.schedule.add_observation(
-                i, source_name, sources_coord[i],
-                sources_exp[i], sources_rep[i], time_now, time_slew, time_obs,
-                time_tot)
-
-            # move telescope, set new time:
-            telescope.set_pos(sources_coord[i])
-            telescope.set_time(time_new)
-            sources.set_scheduled(sources_id[i])
-
-        block = self.schedule.last_block
-        if block.n_obs == 0:
-            return False
-
-        print(block.summary())
-        return True
+        return i
 
     #--------------------------------------------------------------------------
     def run(self, telescope, instrument, sources, constraints, duration=None,
-            twilight='astronomical', start_time=None, time_frame='utc'):
+            twilight='astronomical', start_time=None, time_frame='utc',
+            verbose=True):
         """TODO
         """
 
@@ -644,38 +763,138 @@ class SchedulerNearestNeighbor(Scheduler):
             return False
 
         self.schedule = Schedule()
-
-        # schedule specific number of days:
-        if duration:
-            print('Scheduler: schedule {0:d} days'.format(duration))
-
-            # iterate through days:
-            for i in range(duration):
-                print('Scheduler: schedule day {0:d}'.format(i+1))
-                done = self._schedule_block(
-                    telescope, instrument, sources, constraints, twilight,
-                    start_time, time_frame)
-
-                if not done:
-                    print('Scheduler: no sources scheduled for this block. ' \
-                          'Abort.')
-                    break
-
-        # schedule all sources:
-        else:
-            i = 0
-            while sources.count_sources(scheduled=False) > 0:
-                print('Scheduler: schedule day {0:d}'.format(i+1))
-                i += 1
-                done = self._schedule_block(
-                    telescope, instrument, sources, constraints, twilight,
-                    start_time, time_frame)
-
-                if not done:
-                    print('Scheduler: no sources scheduled for this block. ' \
-                          'Abort.')
-                    break
+        self._run(
+                self.schedule, telescope, instrument, sources, constraints,
+                duration=duration, twilight=twilight, start_time=start_time,
+                time_frame=time_frame, verbose=verbose)
 
 
 #==============================================================================
+
+class SchedulerRS(Scheduler):
+    """Scheduler using random sampling.
+    """
+
+    name = 'SchedulerRS'
+
+    #--------------------------------------------------------------------------
+    def __init__(self, n_rep=100):
+        """Scheduler using random sampling.
+
+        Returns
+        -------
+        None
+        """
+
+        self.n_rep = n_rep
+        self.time_start = None
+        self.time_stop = None
+        self.schedule = None
+        self.schedule_temp = None
+
+    #--------------------------------------------------------------------------
+    def _select_source(
+            self, telescope, sources_id, sources_coord, sources_name,
+            sources_exp, sources_rep):
+        """
+
+
+        Parameters
+        ----------
+        telescope : TYPE
+            DESCRIPTION.
+        sources_id : TYPE
+            DESCRIPTION.
+        sources_coord : TYPE
+            DESCRIPTION.
+        sources_name : TYPE
+            DESCRIPTION.
+        sources_exp : TYPE
+            DESCRIPTION.
+        sources_rep : TYPE
+            DESCRIPTION.
+
+        Returns
+        -------
+        i : TYPE
+            DESCRIPTION.
+
+        """
+
+        i = np.random.randint(sources_id.size)
+        print('Select 1 source randomly from {0:d} options.'.format(
+                sources_id.size))
+
+        return i
+
+    #--------------------------------------------------------------------------
+    def _eval_schedule(self, schedule):
+        """Calculate the sum of the total slew and idle time.
+
+        Parameters
+        ----------
+        schedule : obsplanner.scheduler.Schedule
+            Schedule to be evaluated.
+
+        Returns
+        -------
+         astropy.units.quantity.Quantity
+            Summed slew and idle time.
+        """
+
+        __, time_slew, time_idle = schedule.get_time()
+        time_wasted = time_slew + time_idle
+
+        return -time_wasted.value
+
+    #--------------------------------------------------------------------------
+    def run(self, telescope, instrument, sources, constraints, duration=None,
+            twilight='astronomical', start_time=None, time_frame='utc',
+            verbose=True):
+        """TODO
+        """
+
+        # check if schedule exists:
+        if not self._check_schedule():
+            return False
+
+        # run trials:
+        print('Scheduler: start random sampling..')
+        tel_init_time = telescope.get_time()
+        track_quality = np.zeros(self.n_rep)
+        best_quality = -np.inf
+
+        for i in range(self.n_rep):
+            sys.stdout.write('\rProgress: {0:.1f}%'.format(i*100./self.n_rep))
+            # create new schedule:
+            schedule_temp = Schedule()
+            self._run(
+                    schedule_temp, telescope, instrument, sources, constraints,
+                    duration=duration, twilight=twilight,
+                    start_time=start_time, time_frame=time_frame,
+                    verbose=False)
+            # evaluate schedule:
+            quality = self._eval_schedule(schedule_temp)
+            track_quality[i] = quality
+            print('\n', best_quality, quality)
+            if quality > best_quality:
+                best_quality = quality
+                self.schedule = deepcopy(schedule_temp)
+            # set telescope back to initial time for next iteration:
+            telescope.set_time(tel_init_time, verbose=False)
+            sources.reset_scheduled()
+
+
+        # TODO: determine initial temperature from previous run
+        # TODO: run temperature minimization
+
+        # NOTE: simulated annealing requires a small change in each step, i.e.
+        # swapping two sources. I cannot implement this option, because
+        # swapping two sources means that everything else will change too, as
+        # exposure times differ. Can I implement SA for this problem at all?
+
+        # Trying random paths and taking the best works. But that does not
+        # guarantee a good solution at all. I could still implement it as a
+        # test. It is just a minor variation of the code above. So, I am almost
+        # done.
 

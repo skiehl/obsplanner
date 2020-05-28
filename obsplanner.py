@@ -9,7 +9,7 @@ import numpy as np
 from constraints import Constraint, Constraints
 from constraints import AirmassLimit, ElevationLimit, SunDistance, MoonDistance, MoonPolarization
 from instrument import Instrument, InstrumentSimple
-from scheduler import Scheduler, SchedulerNearestNeighbor
+from scheduler import Scheduler, SchedulerNearestNeighbor, SchedulerRS
 from sources import Sources
 from telescope import Telescope, TelescopeEq, SlewModelLinear
 import visualize as vis
@@ -128,6 +128,7 @@ class Obsplanner(object):
             raise TypeError('Unsupported type: {0}'.format(type(scheduler)))
 
         self.scheduler = scheduler
+        print('Obsplanner: scheduler added: {0:s}'.format(scheduler.name))
 
     #--------------------------------------------------------------------------
     def init_time(self, time):
@@ -290,7 +291,8 @@ if __name__ == "__main__":
     obsplanner.add_constraint(moon_distance)
     obsplanner.add_constraint(moon_polarization)
 
-    scheduler = SchedulerNearestNeighbor()
+    #scheduler = SchedulerNearestNeighbor()
+    scheduler = SchedulerRS(n_rep=4)
     obsplanner.set_scheduler(scheduler)
     obsplanner.run_scheduler(duration=1)
 

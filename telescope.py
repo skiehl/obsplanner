@@ -319,7 +319,7 @@ class Telescope(object, metaclass=ABCMeta):
         return self.time
 
     #--------------------------------------------------------------------------
-    def next_sun_set_rise(self, twilight):
+    def next_sun_set_rise(self, twilight, verbose=True):
         """Calculate time of the next Sun set and Sun rise.
 
         Parameters
@@ -360,7 +360,8 @@ class Telescope(object, metaclass=ABCMeta):
                 "Either set a float or chose from 'astronomical', 'nautical'" \
                 " 'civil', or 'sunset'.")
 
-        print('Current time:    ', self.time)
+        if verbose:
+            print('Current time:    ', self.time)
         time = self.time + np.arange(0., 48., 0.1) * u.h
         frame = AltAz(obstime=time, location=self.loc)
         sun = get_sun(time).transform_to(frame)
@@ -368,16 +369,19 @@ class Telescope(object, metaclass=ABCMeta):
         night = sun_alt < sunset
 
         if np.all(night):
-            print('NOTE: Sun never sets!')
+            if verbose:
+                print('NOTE: Sun never sets!')
             return False
 
         if np.all(~night):
-            print('WARNING: Sun never rises!')
+            if verbose:
+                print('WARNING: Sun never rises!')
             return False
 
         # current time is at night, find next sun set and following sun rise:
         if night[0]:
-            print('NOTE: current time is night time.')
+            if verbose:
+                print('NOTE: current time is night time.')
             # index of next sun rise:
             i = np.argmax(~night)
             # index of next sun set:
@@ -401,8 +405,9 @@ class Telescope(object, metaclass=ABCMeta):
                 / (sun_alt[j+1].deg - sun_alt[j].deg)
         time_sunrise = time[j] + (time[j+1] - time[j]) * interp
 
-        print('Next night start:', time_sunset)
-        print('Next night stop: ', time_sunrise)
+        if verbose:
+            print('Next night start:', time_sunset)
+            print('Next night stop: ', time_sunrise)
 
         return time_sunset, time_sunrise
 
@@ -543,15 +548,18 @@ class TelescopeEq(Telescope):
         rot_dec = self.pos.dec - coord.dec
         t_ra = self.slew_model_ra.get_slew_time(rot_ra)
         t_dec = self.slew_model_dec.get_slew_time(rot_dec)
-        time = [t_ra, t_dec]
+        unit = t_ra._unit
+        time = [t_ra.value, t_dec.value]
 
         if self.dome:
             t_dome = self.slew_model_dome.get_slew_time(rot_ra)
-            time.append(t_dome)
+            time.append(t_dome.value)
 
         # take maximum of all axes:
-        unit = t_ra._unit
-        time_max = np.maximum.reduce(time) * unit
+        if coord.size == 1:
+            time_max = np.max(time) * unit
+        else:
+            time_max = np.maximum.reduce(time) * unit
 
         return time_max
 
